@@ -1,0 +1,14 @@
+{
+  "linters": {
+    "chmod": {
+      "type": "chmod"
+    },
+    "filename": {
+      "type": "filename"
+    },
+    "golint": {
+      "type": "golint",
+      "include": "(\\.go$)"
+    }
+  }
+}
