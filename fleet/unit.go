@@ -1,6 +1,8 @@
 package fleet
 
 import (
+	"log"
+
 	"github.com/coreos/fleet/client"
 	fleet "github.com/coreos/fleet/schema"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -109,12 +111,15 @@ func resourceUnitCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceUnitRead(d *schema.ResourceData, meta interface{}) error {
+	log.Println("[DEBUG] reading fleet unit", d.Id())
 	api := meta.(client.API)
 	unit, err := api.Unit(d.Id())
 	if err != nil {
 		return err
 	}
 	if unit == nil {
+		log.Printf("[DEBUG] api.Unit(%v) returned nil. Unit is no more", d.Id())
+		d.SetId("")
 		return nil
 	}
 
