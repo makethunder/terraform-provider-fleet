@@ -17,10 +17,16 @@ func resourceUnit() *schema.Resource {
 				ForceNew: true,
 			},
 
-			"state": &schema.Schema{
+			"desired_state": &schema.Schema{
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "one of \"inactive\", \"loaded\", or \"launched\"",
+			},
+
+			"current_state": &schema.Schema{
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "actual state of the unit, as reported by fleet",
 			},
 
 			"machineid": &schema.Schema{
@@ -97,7 +103,7 @@ func resourceUnitCreate(d *schema.ResourceData, meta interface{}) error {
 
 	unit := &fleet.Unit{
 		Name:         d.Get("name").(string),
-		DesiredState: d.Get("state").(string),
+		DesiredState: d.Get("desired_state").(string),
 		Options:      options,
 	}
 
@@ -123,7 +129,10 @@ func resourceUnitRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	if err := d.Set("state", unit.CurrentState); err != nil {
+	if err := d.Set("current_state", unit.CurrentState); err != nil {
+		return err
+	}
+	if err := d.Set("desired_state", unit.DesiredState); err != nil {
 		return err
 	}
 	if err := d.Set("machineid", unit.MachineID); err != nil {
@@ -137,7 +146,7 @@ func resourceUnitRead(d *schema.ResourceData, meta interface{}) error {
 
 func resourceUnitUpdate(d *schema.ResourceData, meta interface{}) error {
 	api := meta.(client.API)
-	err := api.SetUnitTargetState(d.Id(), d.Get("state").(string))
+	err := api.SetUnitTargetState(d.Id(), d.Get("desired_state").(string))
 	if err != nil {
 		return err
 	}
