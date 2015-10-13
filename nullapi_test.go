@@ -1,4 +1,4 @@
-package fleet
+package main
 
 import (
 	"testing"

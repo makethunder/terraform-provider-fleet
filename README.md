@@ -1,11 +1,11 @@
-# terraform-fleet
+# terraform-provider-fleet
 
 A plugin for Terraform enabling it to manipulate Fleet (CoreOS) units.
 
 ## Installation
 
   1. Install [Terraform][1].
-  2. `go get github.com/paperg/terraform-fleet/terraform-provider-fleet`
+  2. `go get github.com/paperg/terraform-provider-fleet`
 
 ## Usage
 

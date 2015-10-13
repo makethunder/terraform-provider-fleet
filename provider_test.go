@@ -1,4 +1,4 @@
-package fleet
+package main
 
 import (
 	"errors"
@@ -44,7 +44,7 @@ func TestRetry(test *testing.T) {
 	// if the error contains "timed out", then retry
 	_, err = retry(makeFailOnce("this one time, at band camp, I timed out"), 2)
 	if err != nil {
-		test.Errorf("apparently did not retry: got failure %s")
+		test.Errorf("apparently did not retry: got failure %s", err)
 	}
 
 	// if the error does not contain "timed out", don't retry
