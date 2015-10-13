@@ -3,12 +3,12 @@ package main
 import (
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/coreos/fleet/client"
-	"github.com/coreos/fleet/etcd"
-	"github.com/coreos/fleet/registry"
+	"github.com/coreos/fleet/pkg"
 	"github.com/coreos/fleet/ssh"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -47,30 +47,26 @@ func getAPI(hostAddr string, maxRetries int) (client.API, error) {
 	}
 	sshClient := result.(*ssh.SSHForwardingClient)
 
-	dial := func(network, addr string) (net.Conn, error) {
-		tcpaddr, err := net.ResolveTCPAddr(network, addr)
-		if err != nil {
-			return nil, err
-		}
-		return sshClient.DialTCP(network, nil, tcpaddr)
+	dial := func(string, string) (net.Conn, error) {
+		cmd := "fleetctl fd-forward /var/run/fleet.sock"
+		return ssh.DialCommand(sshClient, cmd)
 	}
 
-	trans := &http.Transport{
-		Dial: dial,
+	trans := pkg.LoggingHTTPTransport{
+		Transport: http.Transport{
+			Dial: dial,
+		},
 	}
 
-	etcdClient, err := etcd.NewClient(
-		[]string{"http://127.0.0.1:4001"},
-		trans,
-		time.Minute,
-	)
-	if err != nil {
-		return nil, err
+	httpClient := http.Client{
+		Transport: &trans,
 	}
 
-	reg := registry.NewEtcdRegistry(etcdClient, registry.DefaultKeyPrefix)
+	// since dial() ignores the endpoint, we just need something here that
+	// won't make the HTTP client complain.
+	endpoint, err := url.Parse("http://domain-sock")
 
-	return &client.RegistryClient{Registry: reg}, nil
+	return client.NewHTTPClient(&httpClient, *endpoint)
 }
 
 // Provider returns the ResourceProvider implemented by this package. Serve

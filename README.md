@@ -18,7 +18,7 @@ There is only one resource: `fleet_unit`. Here is the first example from
 
     resource "fleet_unit" "myapp" {
         name = "myapp.service"
-        state = "launched" // "inactive", "loaded", or "launched"
+        desired_state = "launched" // "inactive", "loaded", or "launched"
         section {
             name = "Unit"
 
