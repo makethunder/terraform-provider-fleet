@@ -1,6 +1,9 @@
 # terraform-provider-fleet
 
-A plugin for Terraform enabling it to manipulate Fleet (CoreOS) units.
+A plugin for Terraform enabling it to manipulate
+[Fleet](https://github.com/coreos/fleet) (CoreOS) units.
+
+[![Circle CI](https://circleci.com/gh/paperg/terraform-provider-fleet.svg?style=svg)](https://circleci.com/gh/paperg/terraform-provider-fleet)
 
 ## Installation
 
