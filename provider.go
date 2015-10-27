@@ -32,24 +32,38 @@ func retry(f func() (interface{}, error), maxRetries int) (interface{}, error) {
 }
 
 // getAPI returns an API to Fleet.
-func getAPI(hostAddr string, maxRetries int) (client.API, error) {
+func getAPI(driver string, driverEndpoint string, hostAddr string, maxRetries int) (client.API, error) {
 	if hostAddr == "" {
 		return nullAPI{}, nil
 	}
+	var endpoint *url.URL
+	var dial func(network, addr string) (net.Conn, error)
+	switch strings.ToLower(driver) {
+	case "api":
+		dial = net.Dial
+	case "tunnel":
+		getSSHClient := func() (interface{}, error) {
+			return ssh.NewSSHClient("core", hostAddr, nil, false, time.Second*10)
+		}
 
-	getSSHClient := func() (interface{}, error) {
-		return ssh.NewSSHClient("core", hostAddr, nil, false, time.Second*10)
+		result, err := retry(getSSHClient, maxRetries)
+		if err != nil {
+			return nil, err
+		}
+		sshClient := result.(*ssh.SSHForwardingClient)
+
+		dial = func(string, string) (net.Conn, error) {
+			cmd := "fleetctl fd-forward /var/run/fleet.sock"
+			return ssh.DialCommand(sshClient, cmd)
+		}
+	default:
+		return nullAPI{}, nil
 	}
 
-	result, err := retry(getSSHClient, maxRetries)
+	endpoint, err := url.Parse(driverEndpoint)
+
 	if err != nil {
 		return nil, err
-	}
-	sshClient := result.(*ssh.SSHForwardingClient)
-
-	dial := func(string, string) (net.Conn, error) {
-		cmd := "fleetctl fd-forward /var/run/fleet.sock"
-		return ssh.DialCommand(sshClient, cmd)
 	}
 
 	trans := pkg.LoggingHTTPTransport{
@@ -62,10 +76,6 @@ func getAPI(hostAddr string, maxRetries int) (client.API, error) {
 		Transport: &trans,
 	}
 
-	// since dial() ignores the endpoint, we just need something here that
-	// won't make the HTTP client complain.
-	endpoint, err := url.Parse("http://domain-sock")
-
 	return client.NewHTTPClient(&httpClient, *endpoint)
 }
 
@@ -74,9 +84,21 @@ func getAPI(hostAddr string, maxRetries int) (client.API, error) {
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
+			"driver": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Default: "tunnel",
+				Description: "Driver to use to connect to Fleet. Can be tunnel or api.",
+			},
 			"tunnel_address": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
+			},
+			"endpoint": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Default: "http://domain-sock",
+				Description: "Endpoint for Fleet. You do not need to set this if you are using SSH.",
 			},
 			"connection_retries": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -94,5 +116,7 @@ func Provider() terraform.ResourceProvider {
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	addr := d.Get("tunnel_address").(string)
 	retries := d.Get("connection_retries").(int)
-	return getAPI(addr, retries)
+	driver := d.Get("driver").(string)
+	endpoint := d.Get("endpoint").(string)
+	return getAPI(driver, endpoint, addr, retries)
 }
