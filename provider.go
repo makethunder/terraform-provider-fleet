@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"fmt"
+	"log"
 
 	"github.com/coreos/fleet/client"
 	"github.com/coreos/fleet/pkg"
@@ -13,7 +15,18 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+
+	"github.com/coreos/fleet/version"
+	"github.com/coreos/fleet/registry"
+	"github.com/coreos/fleet/etcd"
 )
+
+const oldVersionWarning = `####################################################################
+WARNING: fleetctl (%s) is older than the latest registered
+version of fleet found in the cluster (%s). You are strongly
+recommended to upgrade fleetctl to prevent incompatibility issues.
+####################################################################
+`
 
 // retry wraps a function with retry logic. Only errors containing "timed out"
 // will be retried. (authentication errors and other stuff should fail
@@ -31,19 +44,47 @@ func retry(f func() (interface{}, error), maxRetries int) (interface{}, error) {
 	return result, err
 }
 
+func checkVersion(cReg registry.ClusterRegistry) (string, bool) {
+	fv := version.SemVersion
+	lv, err := cReg.LatestDaemonVersion()
+	if err != nil {
+		log.Fatal("error attempting to check latest fleet version in Registry: %v", err)
+	} else if lv != nil && fv.LessThan(*lv) {
+		return fmt.Sprintf(oldVersionWarning, fv.String(), lv.String()), false
+	}
+	return "", true
+}
+
 // getAPI returns an API to Fleet.
-func getAPI(driver string, driverEndpoint string, hostAddr string, maxRetries int) (client.API, error) {
+func getAPI(driver string, driverEndpoint string, hostAddr string, maxRetries int, etcdKeyPrefix string) (client.API, error) {
 
 	var endpoint *url.URL
 	var dial func(network, addr string) (net.Conn, error)
 	switch strings.ToLower(driver) {
 	case "api":
-		dial = nil
+		log.Printf("Using API connection for requests")
+		dial = net.Dial
+	case "etcd":
+		timeout := 20000 * time.Millisecond
+		trans := &http.Transport{}
+		machines := strings.Split(driverEndpoint, ",")
+		eClient, err := etcd.NewClient(machines, trans, timeout)
+		if err != nil {
+			return nil, err
+		}
+
+		reg := registry.NewEtcdRegistry(eClient, etcdKeyPrefix)
+
+		if msg, ok := checkVersion(reg); !ok {
+			log.Fatal(msg)
+		}
+
+		return &client.RegistryClient{Registry: reg}, nil
 	case "tunnel":
 		if hostAddr == "" {
 			return nullAPI{}, nil
 		}
-		
+
 		getSSHClient := func() (interface{}, error) {
 			return ssh.NewSSHClient("core", hostAddr, nil, false, time.Second*10)
 		}
@@ -107,6 +148,12 @@ func Provider() terraform.ResourceProvider {
 				Optional: true,
 				Default:  12,
 			},
+			"etc_key_prefix": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Default: "/_coreos.com/fleet/",
+				Description: "EtcdKeyPrefix to use for fleet",
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"fleet_unit": resourceUnit(),
@@ -120,5 +167,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	retries := d.Get("connection_retries").(int)
 	driver := d.Get("driver").(string)
 	endpoint := d.Get("endpoint").(string)
-	return getAPI(driver, endpoint, addr, retries)
+	etcKeyPrefix := d.Get("etc_key_prefix").(string)
+	return getAPI(driver, endpoint, addr, retries, etcKeyPrefix)
 }

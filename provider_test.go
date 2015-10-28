@@ -58,7 +58,7 @@ func TestGetAPI(test *testing.T) {
 	// when the address is an empty string, we get a nullAPI
 	var api client.API
 
-	api, err := getAPI("nothing", "non-http-endpoint", "", 1)
+	api, err := getAPI("nothing", "non-http-endpoint", "", 1, "")
 
 	if err != nil {
 		test.Fatal(err)
