@@ -18,7 +18,8 @@ import (
 
 	"github.com/coreos/fleet/version"
 	"github.com/coreos/fleet/registry"
-	"github.com/coreos/fleet/etcd"
+
+	etcd "github.com/coreos/fleet/Godeps/_workspace/src/github.com/coreos/etcd/client"
 )
 
 const oldVersionWarning = `####################################################################
@@ -27,6 +28,8 @@ version of fleet found in the cluster (%s). You are strongly
 recommended to upgrade fleetctl to prevent incompatibility issues.
 ####################################################################
 `
+
+const defaultTimeout = time.Second*10
 
 // retry wraps a function with retry logic. Only errors containing "timed out"
 // will be retried. (authentication errors and other stuff should fail
@@ -55,55 +58,73 @@ func checkVersion(cReg registry.ClusterRegistry) (string, bool) {
 	return "", true
 }
 
-// getAPI returns an API to Fleet.
-func getAPI(driver string, driverEndpoint string, hostAddr string, maxRetries int, etcdKeyPrefix string) (client.API, error) {
-
-	var endpoint *url.URL
-	var dial func(network, addr string) (net.Conn, error)
-	switch strings.ToLower(driver) {
-	case "api":
-		log.Printf("Using API connection for requests")
-		dial = net.Dial
-	case "etcd":
-		timeout := 20000 * time.Millisecond
-		trans := &http.Transport{}
-		machines := strings.Split(driverEndpoint, ",")
-		eClient, err := etcd.NewClient(machines, trans, timeout)
-		if err != nil {
-			return nil, err
-		}
-
-		reg := registry.NewEtcdRegistry(eClient, etcdKeyPrefix)
-
-		if msg, ok := checkVersion(reg); !ok {
-			log.Fatal(msg)
-		}
-
-		return &client.RegistryClient{Registry: reg}, nil
-	case "tunnel":
-		if hostAddr == "" {
-			return nullAPI{}, nil
-		}
-
-		getSSHClient := func() (interface{}, error) {
-			return ssh.NewSSHClient("core", hostAddr, nil, false, time.Second*10)
-		}
-
-		result, err := retry(getSSHClient, maxRetries)
-		if err != nil {
-			return nil, err
-		}
-		sshClient := result.(*ssh.SSHForwardingClient)
-
-		dial = func(string, string) (net.Conn, error) {
-			cmd := "fleetctl fd-forward /var/run/fleet.sock"
-			return ssh.DialCommand(sshClient, cmd)
-		}
-	default:
-		return nullAPI{}, nil
-	}
+func getHTTPClient(driverEndpoint string) (client.API, error) {
+	log.Printf("Using API connection for requests")
 
 	endpoint, err := url.Parse(driverEndpoint)
+
+	if err != nil {
+		return nil, err
+	}
+
+	trans := pkg.LoggingHTTPTransport{
+		Transport: http.Transport{},
+	}
+
+	httpClient := http.Client{
+		Transport: &trans,
+	}
+
+	return client.NewHTTPClient(&httpClient, *endpoint)
+}
+
+func getETCDClient(driverEndpoint string, etcdKeyPrefix string) (client.API, error) {
+	log.Printf("Using ETCD connection for requests")
+
+	trans := &http.Transport{}
+
+	eCfg := etcd.Config{
+		Endpoints: strings.Split(driverEndpoint, ","),
+		Transport: trans,
+	}
+
+	eClient, err := etcd.New(eCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	kAPI := etcd.NewKeysAPI(eClient)
+	reg := registry.NewEtcdRegistry(kAPI, etcdKeyPrefix, defaultTimeout)
+
+	if msg, ok := checkVersion(reg); !ok {
+		log.Printf(msg)
+	}
+
+	return &client.RegistryClient{Registry: reg}, nil
+}
+
+func getTunnelClient(driverEndpoint string, maxRetries int) (client.API, error) {
+	log.Printf("Using Fleet Tunnel connection for requests")
+
+	getSSHClient := func() (interface{}, error) {
+		return ssh.NewSSHClient("core", driverEndpoint, nil, false, defaultTimeout)
+	}
+
+	result, err := retry(getSSHClient, maxRetries)
+	if err != nil {
+		return nil, err
+	}
+	sshClient := result.(*ssh.SSHForwardingClient)
+
+	dial := func(string, string) (net.Conn, error) {
+		cmd := "fleetctl fd-forward /var/run/fleet.sock"
+		return ssh.DialCommand(sshClient, cmd)
+	}
+
+	// This is needed to fake out the client - it isn't used
+	// since we're overloading the dial method on the transport
+	// but the client complains if it isn't set
+	fakeHttpEndpoint, err := url.Parse("http://domain-sock")
 
 	if err != nil {
 		return nil, err
@@ -119,7 +140,25 @@ func getAPI(driver string, driverEndpoint string, hostAddr string, maxRetries in
 		Transport: &trans,
 	}
 
-	return client.NewHTTPClient(&httpClient, *endpoint)
+	return client.NewHTTPClient(&httpClient, *fakeHttpEndpoint)
+}
+
+
+// getAPI returns an API to Fleet.
+func getAPI(driver string, driverEndpoint string, maxRetries int, etcdKeyPrefix string) (client.API, error) {
+
+	switch strings.ToLower(driver) {
+	case "api":
+		return getHTTPClient(driverEndpoint)
+	case "etcd":
+		return getETCDClient(driverEndpoint, etcdKeyPrefix)
+	case "tunnel":
+		return getTunnelClient(driverEndpoint, maxRetries)
+	case "null":
+		fallthrough
+	default:
+		return nullAPI{}, nil
+	}
 }
 
 // Provider returns the ResourceProvider implemented by this package. Serve
@@ -133,15 +172,10 @@ func Provider() terraform.ResourceProvider {
 				Default: "tunnel",
 				Description: "Driver to use to connect to Fleet. Can be tunnel or api.",
 			},
-			"tunnel_address": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 			"endpoint": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
-				Default: "http://domain-sock",
-				Description: "Endpoint for Fleet. You do not need to set this if you are using SSH.",
+				Description: "Endpoint for Fleet.",
 			},
 			"connection_retries": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -163,10 +197,9 @@ func Provider() terraform.ResourceProvider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	addr := d.Get("tunnel_address").(string)
 	retries := d.Get("connection_retries").(int)
 	driver := d.Get("driver").(string)
 	endpoint := d.Get("endpoint").(string)
 	etcKeyPrefix := d.Get("etc_key_prefix").(string)
-	return getAPI(driver, endpoint, addr, retries, etcKeyPrefix)
+	return getAPI(driver, endpoint, retries, etcKeyPrefix)
 }
