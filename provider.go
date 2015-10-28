@@ -33,15 +33,17 @@ func retry(f func() (interface{}, error), maxRetries int) (interface{}, error) {
 
 // getAPI returns an API to Fleet.
 func getAPI(driver string, driverEndpoint string, hostAddr string, maxRetries int) (client.API, error) {
-	if hostAddr == "" {
-		return nullAPI{}, nil
-	}
+
 	var endpoint *url.URL
 	var dial func(network, addr string) (net.Conn, error)
 	switch strings.ToLower(driver) {
 	case "api":
-		dial = net.Dial
+		dial = nil
 	case "tunnel":
+		if hostAddr == "" {
+			return nullAPI{}, nil
+		}
+		
 		getSSHClient := func() (interface{}, error) {
 			return ssh.NewSSHClient("core", hostAddr, nil, false, time.Second*10)
 		}
