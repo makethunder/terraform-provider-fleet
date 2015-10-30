@@ -23,9 +23,10 @@ import (
 )
 
 const oldVersionWarning = `####################################################################
-WARNING: fleetctl (%s) is older than the latest registered
-version of fleet found in the cluster (%s). You are strongly
-recommended to upgrade fleetctl to prevent incompatibility issues.
+WARNING: The linked against fleet go lib (%s) is older than the latest
+registered version of fleet found in the cluster (%s). You are strongly
+recommended to upgrade the linked fleet go lib and rebuild to prevent
+incompatibility issues.
 ####################################################################
 `
 
@@ -153,7 +154,10 @@ func getAPI(driver string, driverEndpoint string, maxRetries int, etcdKeyPrefix 
 	case "etcd":
 		return getETCDClient(driverEndpoint, etcdKeyPrefix)
 	case "tunnel":
-		return getTunnelClient(driverEndpoint, maxRetries)
+		if len(driverEndpoint) > 0 {
+			return getTunnelClient(driverEndpoint, maxRetries)
+		}
+		fallthrough
 	case "null":
 		fallthrough
 	default:
