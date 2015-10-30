@@ -104,11 +104,11 @@ func getETCDClient(driverEndpoint string, etcdKeyPrefix string) (client.API, err
 	return &client.RegistryClient{Registry: reg}, nil
 }
 
-func getTunnelClient(driverEndpoint string, maxRetries int) (client.API, error) {
+func getTunnelClient(driverEndpoint string, tunnelEndpoint string, maxRetries int) (client.API, error) {
 	log.Printf("Using Fleet Tunnel connection for requests")
 
 	getSSHClient := func() (interface{}, error) {
-		return ssh.NewSSHClient("core", driverEndpoint, nil, false, defaultTimeout)
+		return ssh.NewSSHClient("core", tunnelEndpoint, nil, false, defaultTimeout)
 	}
 
 	result, err := retry(getSSHClient, maxRetries)
@@ -118,7 +118,7 @@ func getTunnelClient(driverEndpoint string, maxRetries int) (client.API, error) 
 	sshClient := result.(*ssh.SSHForwardingClient)
 
 	dial := func(string, string) (net.Conn, error) {
-		cmd := "fleetctl fd-forward /var/run/fleet.sock"
+		cmd := fmt.Sprintf("fleetctl fd-forward %s", driverEndpoint)
 		return ssh.DialCommand(sshClient, cmd)
 	}
 
@@ -146,7 +146,7 @@ func getTunnelClient(driverEndpoint string, maxRetries int) (client.API, error) 
 
 
 // getAPI returns an API to Fleet.
-func getAPI(driver string, driverEndpoint string, maxRetries int, etcdKeyPrefix string) (client.API, error) {
+func getAPI(driver string, driverEndpoint string, maxRetries int, etcdKeyPrefix string, tunnel string) (client.API, error) {
 
 	switch strings.ToLower(driver) {
 	case "api":
@@ -155,7 +155,7 @@ func getAPI(driver string, driverEndpoint string, maxRetries int, etcdKeyPrefix 
 		return getETCDClient(driverEndpoint, etcdKeyPrefix)
 	case "tunnel":
 		if len(driverEndpoint) > 0 {
-			return getTunnelClient(driverEndpoint, maxRetries)
+			return getTunnelClient(driverEndpoint, tunnel, maxRetries)
 		}
 		fallthrough
 	case "null":
@@ -192,6 +192,12 @@ func Provider() terraform.ResourceProvider {
 				Default: "/_coreos.com/fleet/",
 				Description: "EtcdKeyPrefix to use for fleet",
 			},
+			"tunnel": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Default: "/var/run/fleet.sock",
+				Description: "Tunnel address to use. Defaults to /var/run/fleet.sock",
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"fleet_unit": resourceUnit(),
@@ -205,5 +211,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	driver := d.Get("driver").(string)
 	endpoint := d.Get("endpoint").(string)
 	etcKeyPrefix := d.Get("etcd_key_prefix").(string)
-	return getAPI(driver, endpoint, retries, etcKeyPrefix)
+	tunnel := d.Get("tunnel").(string)
+	return getAPI(driver, endpoint, retries, etcKeyPrefix, tunnel)
 }
