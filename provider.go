@@ -186,7 +186,7 @@ func Provider() terraform.ResourceProvider {
 				Optional: true,
 				Default:  12,
 			},
-			"etc_key_prefix": &schema.Schema{
+			"etcd_key_prefix": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Default: "/_coreos.com/fleet/",
@@ -204,6 +204,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	retries := d.Get("connection_retries").(int)
 	driver := d.Get("driver").(string)
 	endpoint := d.Get("endpoint").(string)
-	etcKeyPrefix := d.Get("etc_key_prefix").(string)
+	etcKeyPrefix := d.Get("etcd_key_prefix").(string)
 	return getAPI(driver, endpoint, retries, etcKeyPrefix)
 }
