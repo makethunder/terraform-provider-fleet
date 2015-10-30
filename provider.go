@@ -108,7 +108,7 @@ func getTunnelClient(driverEndpoint string, tunnelEndpoint string, maxRetries in
 	log.Printf("Using Fleet Tunnel connection for requests")
 
 	getSSHClient := func() (interface{}, error) {
-		return ssh.NewSSHClient("core", tunnelEndpoint, nil, false, defaultTimeout)
+		return ssh.NewSSHClient("core", driverEndpoint, nil, false, defaultTimeout)
 	}
 
 	result, err := retry(getSSHClient, maxRetries)
@@ -118,7 +118,7 @@ func getTunnelClient(driverEndpoint string, tunnelEndpoint string, maxRetries in
 	sshClient := result.(*ssh.SSHForwardingClient)
 
 	dial := func(string, string) (net.Conn, error) {
-		cmd := fmt.Sprintf("fleetctl fd-forward %s", driverEndpoint)
+		cmd := fmt.Sprintf("fleetctl fd-forward %s", tunnelEndpoint)
 		return ssh.DialCommand(sshClient, cmd)
 	}
 
