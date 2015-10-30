@@ -94,8 +94,8 @@ func getETCDClient(driverEndpoint string, etcdKeyPrefix string) (client.API, err
 		return nil, err
 	}
 
-	kAPI := etcd.NewKeysAPI(eClient)
-	reg := registry.NewEtcdRegistry(kAPI, etcdKeyPrefix, defaultTimeout)
+	keysAPI := etcd.NewKeysAPI(eClient)
+	reg := registry.NewEtcdRegistry(keysAPI, etcdKeyPrefix, defaultTimeout)
 
 	if msg, ok := checkVersion(reg); !ok {
 		log.Printf(msg)
@@ -125,7 +125,7 @@ func getTunnelClient(driverEndpoint string, tunnelEndpoint string, maxRetries in
 	// This is needed to fake out the client - it isn't used
 	// since we're overloading the dial method on the transport
 	// but the client complains if it isn't set
-	fakeHttpEndpoint, err := url.Parse("http://domain-sock")
+	fakeHTTPEndpoint, err := url.Parse("http://domain-sock")
 
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func getTunnelClient(driverEndpoint string, tunnelEndpoint string, maxRetries in
 		Transport: &trans,
 	}
 
-	return client.NewHTTPClient(&httpClient, *fakeHttpEndpoint)
+	return client.NewHTTPClient(&httpClient, *fakeHTTPEndpoint)
 }
 
 
