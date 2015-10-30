@@ -12,11 +12,41 @@ A plugin for Terraform enabling it to manipulate
 
 ## Usage
 
+This terraform plugin supports basic connections to the ETCD endpoint,
+the HTTP API endpoint, and over SSH
+
+There is minimal configuration currently supported so the ETCD and API clients
+are attempting to connect directly without SSL
+
+The configuration value 'driver' defaults to 'tunnel' but can be configured with:
+ * etcd
+ * api
+
+EX:
+
+```
+provider "fleet" {
+  driver = "etcd"
+  endpoint = "http://192.168.0.1:4001"
+  // etcd_key_prefix can be ommited to use the default value
+  etcd_key_prefix = "/_some/_weird/etcd/prefix"
+  // connection_retries defaults to 12
+  connection_retries = 9000
+}
+```
+
+```
+provider "fleet" {
+  driver = "api"
+  endpoint = "http://192.168.0.1:8080"
+}
+```
+
 There is only one resource: `fleet_unit`. Here is the first example from
 [the Fleet introduction][3], transcribed to Terraform:
 
     provider "fleet" {
-        tunnel_address = "IP_OR_HOSTNAME_OF_A_COREOS_HOST"
+        endpoint = "IP_OR_HOSTNAME_OF_A_COREOS_HOST"
     }
 
     resource "fleet_unit" "myapp" {

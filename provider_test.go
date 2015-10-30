@@ -58,7 +58,25 @@ func TestGetAPI(test *testing.T) {
 	// when the address is an empty string, we get a nullAPI
 	var api client.API
 
-	api, err := getAPI("", 1)
+	api, err := getAPI("null", "endpoint", 1, "etcd_prefix", "tunnel_address")
+
+	if err != nil {
+		test.Fatal(err)
+	}
+
+	switch api.(type) {
+	case nullAPI:
+		// pass!
+	default:
+		test.Errorf("didn't get nullAPI, got %s instead", api)
+	}
+}
+
+func TestGetAPIEmptyEndpoint(test *testing.T) {
+	// when the address is an empty string, we get a nullAPI
+	var api client.API
+
+	api, err := getAPI("tunnel", "", 1, "etcd_prefix", "tunnel_address")
 
 	if err != nil {
 		test.Fatal(err)
