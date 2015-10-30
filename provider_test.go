@@ -3,11 +3,27 @@ package main
 import (
 	"errors"
 	"testing"
+	"strings"
 
 	"github.com/coreos/fleet/client"
-
 	"github.com/hashicorp/terraform/helper/schema"
 )
+
+// retry wraps a function with retry logic. Only errors containing "timed out"
+// will be retried. (authentication errors and other stuff should fail
+// immediately)
+func retry(f func() (interface{}, error), maxRetries int) (interface{}, error) {
+	var result interface{}
+	var err error
+
+	for retries := 0; retries < maxRetries; retries++ {
+		result, err = f()
+		if err == nil || !strings.Contains(err.Error(), "timed out") {
+			break
+		}
+	}
+	return result, err
+}
 
 func TestProvider(test *testing.T) {
 	provider := Provider().(*schema.Provider)
@@ -54,36 +70,66 @@ func TestRetry(test *testing.T) {
 	}
 }
 
-func TestGetAPI(test *testing.T) {
+func TestGetRegistryAPI(test *testing.T) {
 	// when the address is an empty string, we get a nullAPI
 	var api client.API
 
-	api, err := getAPI("null", "endpoint", 1, "etcd_prefix", "tunnel_address")
+	api, err := getAPI(Conf{
+		ClientDriver : "api",
+		Endpoint : "",
+		EtcdKeyPrefix : "",
+		KeyFile : "",
+		CertFile : "",
+		CAFile : "",
+		Tunnel : "",
+		KnownHostsFile : "",
+		SSHUserName : "",
+
+		StrictHostKeyChecking : false,
+
+		SSHTimeout : 1.0,
+		RequestTimeout : 1.0,
+	})
 
 	if err != nil {
 		test.Fatal(err)
 	}
 
 	switch api.(type) {
-	case nullAPI:
+	case client.RegistryClient:
 		// pass!
 	default:
 		test.Errorf("didn't get nullAPI, got %s instead", api)
 	}
 }
 
-func TestGetAPIEmptyEndpoint(test *testing.T) {
+func TestGetHTTPAPI(test *testing.T) {
 	// when the address is an empty string, we get a nullAPI
 	var api client.API
 
-	api, err := getAPI("tunnel", "", 1, "etcd_prefix", "tunnel_address")
+	api, err := getAPI(Conf{
+		ClientDriver : "api",
+		Endpoint : "",
+		EtcdKeyPrefix : "",
+		KeyFile : "",
+		CertFile : "",
+		CAFile : "",
+		Tunnel : "",
+		KnownHostsFile : "",
+		SSHUserName : "",
+
+		StrictHostKeyChecking : false,
+
+		SSHTimeout : 1.0,
+		RequestTimeout : 1.0,
+	})
 
 	if err != nil {
 		test.Fatal(err)
 	}
 
 	switch api.(type) {
-	case nullAPI:
+	case client.HTTPClient:
 		// pass!
 	default:
 		test.Errorf("didn't get nullAPI, got %s instead", api)
