@@ -38,7 +38,7 @@ provider "fleet" {
 ```
 provider "fleet" {
   driver = "api"
-  endpoint = "http://192.168.0.1:4001"
+  endpoint = "http://192.168.0.1:8080"
 }
 ```
 
