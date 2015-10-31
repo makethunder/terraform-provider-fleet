@@ -75,7 +75,7 @@ func TestGetRegistryAPI(test *testing.T) {
 	var api client.API
 
 	api, err := getAPI(Conf{
-		ClientDriver : "api",
+		ClientDriver : "etcd",
 		Endpoint : "",
 		EtcdKeyPrefix : "",
 		KeyFile : "",
@@ -96,7 +96,7 @@ func TestGetRegistryAPI(test *testing.T) {
 	}
 
 	switch api.(type) {
-	case client.RegistryClient:
+	case *client.RegistryClient:
 		// pass!
 	default:
 		test.Errorf("didn't get nullAPI, got %s instead", api)
@@ -109,7 +109,7 @@ func TestGetHTTPAPI(test *testing.T) {
 
 	api, err := getAPI(Conf{
 		ClientDriver : "api",
-		Endpoint : "",
+		Endpoint : "http://falselocation.test:8080",
 		EtcdKeyPrefix : "",
 		KeyFile : "",
 		CertFile : "",
@@ -129,7 +129,7 @@ func TestGetHTTPAPI(test *testing.T) {
 	}
 
 	switch api.(type) {
-	case client.HTTPClient:
+	case *client.HTTPClient:
 		// pass!
 	default:
 		test.Errorf("didn't get nullAPI, got %s instead", api)

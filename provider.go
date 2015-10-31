@@ -213,8 +213,10 @@ func getRegistryClient(conf Conf) (client.API, error) {
 	keysAPI := etcd.NewKeysAPI(eClient)
 	reg := registry.NewEtcdRegistry(keysAPI, conf.EtcdKeyPrefix, getRequestTimeoutFlag(conf))
 
-	if msg, ok := checkVersion(reg); !ok {
-		stderr(msg)
+	if len(conf.Endpoint) > 0 {
+		if msg, ok := checkVersion(reg); !ok {
+			stderr(msg)
+		}
 	}
 
 	return &client.RegistryClient{Registry: reg}, nil
