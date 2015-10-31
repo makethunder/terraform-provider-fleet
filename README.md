@@ -15,12 +15,86 @@ A plugin for Terraform enabling it to manipulate
 This terraform plugin supports basic connections to the ETCD endpoint,
 the HTTP API endpoint, and over SSH
 
-There is minimal configuration currently supported so the ETCD and API clients
-are attempting to connect directly without SSL
+The configuration mimics the fleetctl tool.
 
-The configuration value 'driver' defaults to 'tunnel' but can be configured with:
- * etcd
- * api
+Here are the configuration names, default values, and optional status from the
+terraform provider schema:
+
+```
+schema.Schema{
+    "driver": &schema.Schema{
+        Type:     schema.TypeString,
+        Optional: true,
+        Description: "Adapter used to execute fleetctl commands. Options include api and etcd.",
+        Default: "api",
+    },
+    "endpoint": &schema.Schema{
+        Type:     schema.TypeString,
+        Optional: true,
+        Description: "Location of the fleet API if --driver=api. Alternatively, if --driver=etcd, location of the etcd API.",
+        Default: "unix:///var/run/fleet.sock",
+    },
+    "etcd-key-prefix": &schema.Schema{
+        Type:     schema.TypeString,
+        Optional: true,
+        Default: registry.DefaultKeyPrefix,
+        Description: "Keyspace for fleet data in etcd (development use only!)",
+    },
+    "key-file": &schema.Schema{
+        Type:     schema.TypeString,
+        Optional: true,
+        Default: "/var/run/fleet.sock",
+        Description: "Location of TLS key file used to secure communication with the fleet API or etcd",
+    },
+    "cert-file": &schema.Schema{
+        Type:     schema.TypeString,
+        Optional: true,
+        Description: "Location of TLS cert file used to secure communication with the fleet API or etcd",
+    },
+    "ca-file": &schema.Schema{
+        Type:     schema.TypeString,
+        Optional: true,
+        Description: "Location of TLS CA file used to secure communication with the fleet API or etcd",
+    },
+    "tunnel": &schema.Schema{
+        Type:     schema.TypeString,
+        Optional: true,
+        Description: "Establish an SSH tunnel through the provided address for communication with fleet and etcd.",
+    },
+    "known-hosts-file": &schema.Schema{
+        Type:     schema.TypeString,
+        Optional: true,
+        Description: "File used to store remote machine fingerprints. Ignored if strict host key checking is disabled.",
+        Default: ssh.DefaultKnownHostsFile,
+    },
+    "ssh-username": &schema.Schema{
+        Type:     schema.TypeString,
+        Optional: true,
+        Description: "Username to use when connecting to CoreOS instance.",
+        Default: "core",
+    },
+
+    "strict-host-key-checking": &schema.Schema{
+        Type:     schema.TypeBool,
+        Optional: true,
+        Description: "Verify host keys presented by remote machines before initiating SSH connections.",
+        Default: true,
+    },
+
+    "ssh-timeout": &schema.Schema{
+        Type:     schema.TypeFloat,
+        Optional: true,
+        Description: "Amount of time in seconds to allow for SSH connection initialization before failing.",
+        Default: 10.0,
+    },
+    "request-timeout": &schema.Schema{
+        Type:     schema.TypeFloat,
+        Optional: true,
+        Description: "Amount of time in seconds to allow a single request before considering it failed.",
+        Default: 3.0,
+    },
+}
+```
 
 EX:
 
