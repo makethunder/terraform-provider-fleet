@@ -12,13 +12,11 @@ A plugin for Terraform enabling it to manipulate
 
 ## Usage
 
-This terraform plugin supports basic connections to the ETCD endpoint,
-the HTTP API endpoint, and over SSH
+This terraform plugin supports the same connections as fleetctl. The
+configuration mimics the fleetctl tool as well.
 
-The configuration mimics the fleetctl tool.
-
-Here are the configuration names, default values, and optional status from the
-terraform provider schema:
+Here are the configuration names, default values, descriptions, and required
+values from the terraform provider schema:
 
 ```
 schema.Schema{
