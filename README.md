@@ -62,8 +62,6 @@ provider "fleet" {
   endpoint = "http://192.168.0.1:4001"
   // etcd_key_prefix can be ommited to use the default value
   etcd_key_prefix = "/_some/_weird/etcd/prefix"
-  // connection_retries defaults to 12
-  connection_retries = 9000
 }
 ```
 
