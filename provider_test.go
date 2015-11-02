@@ -15,7 +15,7 @@ func TestProvider(test *testing.T) {
 }
 
 func TestGetRegistryAPI(test *testing.T) {
-	// when the address is an empty string, we get a nullAPI
+	// let's get a registry client to etcd
 	var api client.API
 
 	api, err := getAPI(Conf{
@@ -40,7 +40,7 @@ func TestGetRegistryAPI(test *testing.T) {
 }
 
 func TestGetHTTPAPI(test *testing.T) {
-	// when the address is an empty string, we get a nullAPI
+	// let's get an http api to fleet
 	var api client.API
 
 	api, err := getAPI(Conf{
