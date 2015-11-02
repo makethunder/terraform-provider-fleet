@@ -150,7 +150,7 @@ func getHTTPClient(conf Conf) (client.API, error) {
 		ep.Scheme = "http"
 
 		// The Host field is not used for dialing, but will be exposed in debug logs.
-		ep.Host = "domain-sock"
+		ep.Host = "domain_sock"
 	}
 
 	tlsConfig, err := pkg.ReadTLSConfigFiles(conf.CAFile, conf.CertFile, conf.KeyFile)
@@ -277,24 +277,24 @@ func Provider() terraform.ResourceProvider {
 			    Description: "Location of the fleet API if --driver=api. Alternatively, if --driver=etcd, location of the etcd API.",
 				Default: "unix:///var/run/fleet.sock",
 			},
-			"etcd-key-prefix": &schema.Schema{
+			"etcd_key_prefix": &schema.Schema{
 			    Type:     schema.TypeString,
 			    Optional: true,
 				Default: registry.DefaultKeyPrefix,
 			    Description: "Keyspace for fleet data in etcd (development use only!)",
 			},
-			"key-file": &schema.Schema{
+			"key_file": &schema.Schema{
 			    Type:     schema.TypeString,
 			    Optional: true,
 				Default: "/var/run/fleet.sock",
 			    Description: "Location of TLS key file used to secure communication with the fleet API or etcd",
 			},
-			"cert-file": &schema.Schema{
+			"cert_file": &schema.Schema{
 			    Type:     schema.TypeString,
 			    Optional: true,
 			    Description: "Location of TLS cert file used to secure communication with the fleet API or etcd",
 			},
-			"ca-file": &schema.Schema{
+			"ca_file": &schema.Schema{
 			    Type:     schema.TypeString,
 			    Optional: true,
 			    Description: "Location of TLS CA file used to secure communication with the fleet API or etcd",
@@ -304,33 +304,33 @@ func Provider() terraform.ResourceProvider {
 			    Optional: true,
 			    Description: "Establish an SSH tunnel through the provided address for communication with fleet and etcd.",
 			},
-			"known-hosts-file": &schema.Schema{
+			"known_hosts_file": &schema.Schema{
 			    Type:     schema.TypeString,
 			    Optional: true,
 			    Description: "File used to store remote machine fingerprints. Ignored if strict host key checking is disabled.",
 				Default: ssh.DefaultKnownHostsFile,
 			},
-			"ssh-username": &schema.Schema{
+			"ssh_username": &schema.Schema{
 			    Type:     schema.TypeString,
 			    Optional: true,
 			    Description: "Username to use when connecting to CoreOS instance.",
 				Default: "core",
 			},
 
-			"strict-host-key-checking": &schema.Schema{
+			"strict_host_key_checking": &schema.Schema{
 			    Type:     schema.TypeBool,
 			    Optional: true,
 			    Description: "Verify host keys presented by remote machines before initiating SSH connections.",
 				Default: true,
 			},
 
-			"ssh-timeout": &schema.Schema{
+			"ssh_timeout": &schema.Schema{
 			    Type:     schema.TypeFloat,
 			    Optional: true,
 			    Description: "Amount of time in seconds to allow for SSH connection initialization before failing.",
 				Default: 10.0,
 			},
-			"request-timeout": &schema.Schema{
+			"request_timeout": &schema.Schema{
 			    Type:     schema.TypeFloat,
 			    Optional: true,
 			    Description: "Amount of time in seconds to allow a single request before considering it failed.",
@@ -348,17 +348,17 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	return getAPI(Conf{
 		ClientDriver : d.Get("driver").(string),
 		Endpoint : d.Get("endpoint").(string),
-		EtcdKeyPrefix : d.Get("etcd-key-prefix").(string),
-		KeyFile : d.Get("key-file").(string),
-		CertFile : d.Get("cert-file").(string),
-		CAFile : d.Get("ca-file").(string),
+		EtcdKeyPrefix : d.Get("etcd_key_prefix").(string),
+		KeyFile : d.Get("key_file").(string),
+		CertFile : d.Get("cert_file").(string),
+		CAFile : d.Get("ca_file").(string),
 		Tunnel : d.Get("tunnel").(string),
-		KnownHostsFile : d.Get("known-hosts-file").(string),
-		SSHUserName : d.Get("ssh-username").(string),
+		KnownHostsFile : d.Get("known_hosts_file").(string),
+		SSHUserName : d.Get("ssh_username").(string),
 
-		StrictHostKeyChecking : d.Get("strict-host-key-checking").(bool),
+		StrictHostKeyChecking : d.Get("strict_host_key_checking").(bool),
 
-		SSHTimeout : d.Get("ssh-timeout").(float64),
-		RequestTimeout : d.Get("request-timeout").(float64),
+		SSHTimeout : d.Get("ssh_timeout").(float64),
+		RequestTimeout : d.Get("request_timeout").(float64),
 	})
 }
