@@ -1,9 +1,7 @@
 package main
 
 import (
-	"errors"
 	"testing"
-	"strings"
 
 	"github.com/coreos/fleet/client"
 	"github.com/hashicorp/terraform/helper/schema"
