@@ -74,6 +74,13 @@ provider "fleet" {
 }
 ```
 
+```
+provider "fleet" {
+  tunnel = "10.0.0.1:22"
+  ssh_username = "not_core"
+}
+```
+
 There is only one resource: `fleet_unit`. Here is the first example from
 [the Fleet introduction][3], transcribed to Terraform:
 
