@@ -18,81 +18,41 @@ configuration mimics the fleetctl tool as well.
 Here are the configuration names, default values, descriptions, and required
 values from the terraform provider schema:
 
-```
-schema.Schema{
-    "driver": &schema.Schema{
-        Type:     schema.TypeString,
-        Optional: true,
-        Description: "Adapter used to execute fleetctl commands. Options include api and etcd.",
-        Default: "api",
-    },
-    "endpoint": &schema.Schema{
-        Type:     schema.TypeString,
-        Optional: true,
-        Description: "Location of the fleet API if --driver=api. Alternatively, if --driver=etcd, location of the etcd API.",
-        Default: "unix:///var/run/fleet.sock",
-    },
-    "etcd-key-prefix": &schema.Schema{
-        Type:     schema.TypeString,
-        Optional: true,
-        Default: registry.DefaultKeyPrefix,
-        Description: "Keyspace for fleet data in etcd (development use only!)",
-    },
-    "key-file": &schema.Schema{
-        Type:     schema.TypeString,
-        Optional: true,
-        Default: "/var/run/fleet.sock",
-        Description: "Location of TLS key file used to secure communication with the fleet API or etcd",
-    },
-    "cert-file": &schema.Schema{
-        Type:     schema.TypeString,
-        Optional: true,
-        Description: "Location of TLS cert file used to secure communication with the fleet API or etcd",
-    },
-    "ca-file": &schema.Schema{
-        Type:     schema.TypeString,
-        Optional: true,
-        Description: "Location of TLS CA file used to secure communication with the fleet API or etcd",
-    },
-    "tunnel": &schema.Schema{
-        Type:     schema.TypeString,
-        Optional: true,
-        Description: "Establish an SSH tunnel through the provided address for communication with fleet and etcd.",
-    },
-    "known-hosts-file": &schema.Schema{
-        Type:     schema.TypeString,
-        Optional: true,
-        Description: "File used to store remote machine fingerprints. Ignored if strict host key checking is disabled.",
-        Default: ssh.DefaultKnownHostsFile,
-    },
-    "ssh-username": &schema.Schema{
-        Type:     schema.TypeString,
-        Optional: true,
-        Description: "Username to use when connecting to CoreOS instance.",
-        Default: "core",
-    },
-
-    "strict-host-key-checking": &schema.Schema{
-        Type:     schema.TypeBool,
-        Optional: true,
-        Description: "Verify host keys presented by remote machines before initiating SSH connections.",
-        Default: true,
-    },
-
-    "ssh-timeout": &schema.Schema{
-        Type:     schema.TypeFloat,
-        Optional: true,
-        Description: "Amount of time in seconds to allow for SSH connection initialization before failing.",
-        Default: 10.0,
-    },
-    "request-timeout": &schema.Schema{
-        Type:     schema.TypeFloat,
-        Optional: true,
-        Description: "Amount of time in seconds to allow a single request before considering it failed.",
-        Default: 3.0,
-    },
-}
-```
+- driver
+  * Description: Adapter used to execute fleetctl commands. Options include api and etcd.
+  * Default: "api"
+- endpoint
+  * Description: Location of the fleet API if --driver=api. Alternatively, if --driver=etcd, location of the etcd API.
+  * Default: "unix:///var/run/fleet.sock"
+- etcd-key-prefix
+  * Description: Keyspace for fleet data in etcd (development use only!)
+- key-file
+  * Default: /var/run/fleet.sock
+  * Description: Location of TLS key file used to secure communication with the fleet API or etcd
+- cert-file
+  * Description: Location of TLS cert file used to secure communication with the fleet API or etcd
+  * Default:
+- ca-file
+  * Description: Location of TLS CA file used to secure communication with the fleet API or etcd
+  * Default:
+- tunnel
+  * Description: Establish an SSH tunnel through the provided address for communication with fleet and etcd.
+  * Default:
+- known-hosts-file
+  * Description: File used to store remote machine fingerprints. Ignored if strict host key checking is disabled.
+  * Default: ssh.DefaultKnownHostsFile
+- ssh-username
+  * Description: Username to use when connecting to CoreOS instance.
+  * Default: "core"
+- strict-host-key-checking
+  * Description: Verify host keys presented by remote machines before initiating SSH connections.
+  * Default: true
+- ssh-timeout
+  * Description: Amount of time in seconds to allow for SSH connection initialization before failing.
+  * Default: 10.0
+- request-timeout
+  * Description: Amount of time in seconds to allow a single request before considering it failed.
+  * Default: 3.0
 
 EX:
 
