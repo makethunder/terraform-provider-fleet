@@ -1,11 +1,9 @@
 package main
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/coreos/fleet/client"
-
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -16,58 +14,53 @@ func TestProvider(test *testing.T) {
 	}
 }
 
-func TestRetry(test *testing.T) {
-	// if the underlying function times out enough, the error is passed
-	// through.
-	failAlways := func() (interface{}, error) {
-		return nil, errors.New("timed out")
-	}
-
-	_, err := retry(failAlways, 2)
-
-	if err == nil || err.Error() != "timed out" {
-		test.Errorf("did not receive failure from underlying function, got %s instead", err)
-	}
-
-	// generate a function that fails the first time with a specified message
-	makeFailOnce := func(errorMessage string) func() (interface{}, error) {
-		retries := 0
-		return func() (interface{}, error) {
-			if retries > 0 {
-				return nil, nil
-			}
-			retries++
-			return nil, errors.New(errorMessage)
-		}
-	}
-
-	// if the error contains "timed out", then retry
-	_, err = retry(makeFailOnce("this one time, at band camp, I timed out"), 2)
-	if err != nil {
-		test.Errorf("apparently did not retry: got failure %s", err)
-	}
-
-	// if the error does not contain "timed out", don't retry
-	_, err = retry(makeFailOnce("some other problem"), 2)
-	if err == nil {
-		test.Error("retried for non-timeout error")
-	}
-}
-
-func TestGetAPI(test *testing.T) {
-	// when the address is an empty string, we get a nullAPI
+func TestGetRegistryAPI(test *testing.T) {
+	// let's get a registry client to etcd
 	var api client.API
 
-	api, err := getAPI("", 1)
+	api, err := getAPI(Conf{
+		ClientDriver : "etcd",
+
+		StrictHostKeyChecking : false,
+
+		SSHTimeout : 1.0,
+		RequestTimeout : 1.0,
+	})
 
 	if err != nil {
 		test.Fatal(err)
 	}
 
 	switch api.(type) {
-	case nullAPI:
+	case *client.RegistryClient:
 		// pass!
 	default:
-		test.Errorf("didn't get nullAPI, got %s instead", api)
+		test.Errorf("didn't get Registry API, got %s instead", api)
+	}
+}
+
+func TestGetHTTPAPI(test *testing.T) {
+	// let's get an http api to fleet
+	var api client.API
+
+	api, err := getAPI(Conf{
+		ClientDriver : "api",
+		Endpoint : "http://falselocation.test:8080",
+
+		StrictHostKeyChecking : false,
+
+		SSHTimeout : 1.0,
+		RequestTimeout : 1.0,
+	})
+
+	if err != nil {
+		test.Fatal(err)
+	}
+
+	switch api.(type) {
+	case *client.HTTPClient:
+		// pass!
+	default:
+		test.Errorf("didn't get HTTP API, got %s instead", api)
 	}
 }
